@@ -4,7 +4,7 @@ This is a project to create a minimal browser-based interface for the [General T
 
 For a detailed Description of the process of deciphering the protocol, see [this blog post](https://www.tigoe.com/pcomp/code/javascript/1309/).
 
-[View the page live](https://htmlpreview.github.io/?https://raw.githubusercontent.com/tigoe/TS04-Bluetooth-Meter/master/index.html).
+[View the page live](https://htmlpreview.github.io/?https://raw.githubusercontent.com/kaimdaim/TS04-Bluetooth-Meter/master/index.html).
 
 ## References:
 
