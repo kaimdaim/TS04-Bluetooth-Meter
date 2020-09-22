@@ -77,6 +77,12 @@ function disconnect() {
   }
 }
 
+function saveToFile(){
+  connect();
+  var x = new CSVExport(meter);
+  return false;
+}
+
 // ------------------ Meter protocol parsing functions
 function decode(data) {
   meter = {
