@@ -43,12 +43,6 @@ function connect() {
     characteristic.startNotifications()
     .then(subscribeToChanges);
   })
-  .then(function(saveToFile) {
-  connect();
-  var x = new CSVExport(meter);
-  return false;
-}
- })       
   .catch(function(error) {
     // catch any errors:
     console.error('Connection failed!', error);
