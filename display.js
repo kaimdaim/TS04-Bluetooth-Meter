@@ -45,6 +45,13 @@ function fillDisplay(thisMeter) {
   // what setting are you on?
   document.getElementById('setting').value = thisMeter.setting;
 }
+}
+
+function saveToFile(){
+  connect();
+  var x = new CSVExport(meter);
+  return false;
+}
 
 // clear all the display elements except the connection status:
 function clearDisplay(meter) {
