@@ -47,11 +47,6 @@ function fillDisplay(thisMeter) {
 }
 }
 
-function saveToFile(){
-  connect();
-  var x = new CSVExport(meter);
-  return false;
-}
 
 // clear all the display elements except the connection status:
 function clearDisplay(meter) {
