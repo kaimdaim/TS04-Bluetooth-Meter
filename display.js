@@ -45,8 +45,6 @@ function fillDisplay(thisMeter) {
   // what setting are you on?
   document.getElementById('setting').value = thisMeter.setting;
 }
-}
-
 
 // clear all the display elements except the connection status:
 function clearDisplay(meter) {
