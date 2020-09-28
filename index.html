@@ -23,6 +23,23 @@
   </div>
   <button onClick='connect()'>connect</button>
   <button onClick='disconnect()'>disconnect</button>
+  <div>
+  let photo;
+
+function preload() {
+  photo = loadImage('https://htmlpreview.github.io/?https://raw.githubusercontent.com/kaimdaim/TS04-Bluetooth-Meter/master/index.html
+');
+}
+
+function draw() {
+  image(photo, 0, 0);
+}
+
+function keyTyped() {
+  if (key === 's') {
+    photo.save('photo', 'jpg');
+  }
+}
 
 </body>
 </html>
