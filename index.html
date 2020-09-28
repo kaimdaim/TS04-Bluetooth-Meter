@@ -5,7 +5,6 @@
   <title>General Tools ToolSmart TS-04 Multimeter</title>
   <script src='display.js'></script>
   <script src='ble-ts04.js'></script>
-  <script src='save.js'></script>
   
 </head>
 
@@ -24,6 +23,22 @@
   </div>
   <button onClick='connect()'>connect</button>
   <button onClick='disconnect()'>disconnect</button>
+
+  function setup() { 
+createCanvas(500, 300); 
+textSize(18); 
+
+background("white"); 
+text("KAYDET", 20, 20); 
+
+// Create a button for saving canvas image 
+saveImageBtn = createButton("Save Canvas"); 
+saveImageBtn.position(150, 60); 
+saveImageBtn.mousePressed(saveAsCanvas); 
+
+function saveAsCanvas() { 
+save("output_canvas.png"); 
+} 
 
 </body>
 </html>
