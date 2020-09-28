@@ -64,7 +64,19 @@ function handleData(event) {
     decode(buf);
     // from display.js, fill the HTML page:
     fillDisplay(meter);
-  }
+ }
+   // save incoming data: 
+  function saveAsCSV() { 
+  let exampleTable = new p5.Table(); 
+  let newRow = exampleTable.addRow(); 
+  exampleTable.addColumn("acDc"); 
+  exampleTable.addColumn("reading"); 
+  newRow.setString("acDc", "value"); 
+  newRow.setString("reading", "value"); 
+  
+  save(exampleTable, "output_CSV.csv"); 
+} 
+  } 
 }
 
 // disconnect function:
