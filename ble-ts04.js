@@ -1,4 +1,3 @@
-<script>
 /*
 This script connects to a TS-04 multimeter using web-bluetooth
 and parses the meter's data protocol. It then calls functions from display.js
@@ -98,14 +97,9 @@ function decode(data) {
   //   reading += data[i].toString(16);
   // }
   //  console.log(reading);
-  function selectText() {
-  const input = document.getElementById('console.log(reading)');
-  input.focus();
-  input.select();
-}
 
   /*
-  get the numeric values. Each seven-segment LCD numeral is split across
+  get the numeric vslues. Each seven-segment LCD numeral is split across
   two bytes. See https://www.tigoe.com/pcomp/code/javascript/1309/ for more details
   */
 
@@ -267,5 +261,3 @@ function makeDigit(byteValue, prevValue) {
   }
   return digit;
 }
-
-</script>
