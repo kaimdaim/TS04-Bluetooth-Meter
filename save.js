@@ -1,9 +1,9 @@
-// gets the value
+// sets the value
 let inp;
 function setup() {
-  inp = createInput('');
+  inp = createInput('Reading');
 }
 
 function mousePressed() {
-  print(inp.value());
+  inp.value('Reading');
 }
