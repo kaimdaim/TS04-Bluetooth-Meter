@@ -64,17 +64,22 @@ function handleData(event) {
     decode(buf);
     // from display.js, fill the HTML page:
     fillDisplay(meter);
- }
-   // save incoming data: 
-  function saveAsCSV() { 
-  let exampleTable = new p5.Table(); 
-  let newRow = exampleTable.addRow(); 
-  exampleTable.addColumn("acDc"); 
-  exampleTable.addColumn("reading"); 
-  newRow.setString("acDc", "value"); 
-  newRow.setString("reading", "value"); 
+   })
+    .then(function(setup) {  
+// Create a button for saving text 
+saveTextBtn = createButton("Veri Kaydet"); 
+saveTextBtn.position(30, 60); 
+saveTextBtn.mousePressed(saveAsText); 
+
+} 
+
+function saveAsText() { 
+let textToSave = ["fillDisplay(meter)"]; 
+save(textToSave, "output_text.txt"); 
+} 
+ 
   
-  save(exampleTable, "output_CSV.csv"); 
+ 
 } 
   } 
 }
