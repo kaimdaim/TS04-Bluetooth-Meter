@@ -1,9 +1,28 @@
 <script>
+text("Okumayı kaydetmek için bas", 20, 20); 
 function setup() { 
-  createCanvas(500, 300); 
-  textSize(22); 
+createCanvas(500, 300); 
+textSize(22); 
 
-  text("Click on the button below to save the written text", 20, 20); 
+// Create a textarea for the input of reading
+inputArea = createElement("textarea"); 
+inputArea.position(30, 50); 
+inputArea.size(400, 120); 
+
+// Create a button for saving text 
+saveBtn = createButton("Save text to file"); 
+saveBtn.position(30, 200); 
+saveBtn.mousePressed(saveFile); 
+} 
+
+function saveFile() { 
+// Get the value of the textarea 
+// Split according to nextline characters 
+stringList = inputArea.value().split("\n"); 
+
+// Save the strings to file 
+save(stringList, "output_file.txt"); 
+} 
 
   // handle incoming data:
 function handleData(event) {
@@ -21,11 +40,6 @@ function handleData(event) {
   saveBtn.position(30, 200); 
   saveBtn.mousePressed(saveFile); 
 } 
-
-function saveFile() { 
-  // get the data buffer from the meter 
-  // Split according to nextline characters 
-  stringList = inputArea.value().split("\n"); 
 
   // Save the strings to file 
   save(stringList, "output_file.txt"); 
