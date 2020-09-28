@@ -74,13 +74,11 @@ saveTextBtn.mousePressed(saveAsText);
 } 
 
 function saveAsText() { 
-let textToSave = ["fillDisplay(meter)"]; 
+let textToSave = [return fillDisplay(meter)]; 
 save(textToSave, "output_text.txt"); 
 } 
  
-  
- 
-} 
+ } 
   } 
 }
 
