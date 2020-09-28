@@ -5,7 +5,8 @@
   <title>General Tools ToolSmart TS-04 Multimeter</title>
   <script src='display.js'></script>
   <script src='ble-ts04.js'></script>
-
+  <script src='save.js'></script>
+  
 </head>
 
 <body>
@@ -23,31 +24,6 @@
   </div>
   <button onClick='connect()'>connect</button>
   <button onClick='disconnect()'>disconnect</button>
-  
-  </body>
-  </html>
-  
- </head>
-
- <body>
-   
-  <div id='save'>
-  let photo;
-
-  function preload() {
-  photo = loadImage('https://htmlpreview.github.io/?https://raw.githubusercontent.com/kaimdaim/TS04-Bluetooth-Meter/master/index.html
-');
-}
-
-function draw() {
-  image(photo, 0, 0);
-}
-
-function keyTyped() {
-  if (key === 's') {
-    photo.save('photo', 'jpg');
-  }
-}
 
 </body>
 </html>
