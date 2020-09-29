@@ -1,3 +1,253 @@
+#include <assert.h>
+#include <glib.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <math.h>
+#include <sys/time.h>
+#include <time.h>
+#include <signal.h>
+#include <termios.h>
+
+#include <gattlib.h>
+
+#define VERSION "1.4.0"
+
+_Bool quiet = FALSE;
+
+#define BLE_SCAN_TIMEOUT   3
+
+GMainLoop *loop;
+
+// BLE GATT UUID
+uuid_t g_command_uuid = CREATE_UUID16(0xfff1);
+uuid_t g_control_uuid = CREATE_UUID16(0xfff3);
+const uuid_t g_measurement_uuid = CREATE_UUID16(0xfff4);
+
+gatt_connection_t* connection;
+char *address = NULL;
+const char BDM[] = "BDM";
+
+// Offline recording
+#define DATE_CMD    "*DATe"
+#define RECORD_CMD  "*RECOrd,"
+#define READLEN_CMD "*READlen?"
+#define READ_CMD    "*READ1?"
+
+#define MAX_MEASUREMENTS 10000
+
+uint32_t interval = 0;
+uint32_t num_measurements = 0;
+
+_Bool offline = FALSE;
+uint16_t offline_function = 0;
+time_t offline_time = 0;
+uint32_t offline_interval;
+
+
+// Interactive controls
+_Bool interactive = FALSE;
+struct termios orig_termios;
+
+#define SELECT          0x0101
+#define AUTO            0x0002
+#define RANGE           0x0102
+#define LIGHT           0x0003
+#define HOLD            0x0103
+#define BLUETOOTH_OFF   0x0004
+#define RELATIVE        0x0104
+#define HZ              0x0105
+#define NORMAL          0x0006
+#define MIN_MAX         0x0106
+
+
+// Output options
+enum {space, csv, json} format = space;
+
+enum {none, elapsed_sec, actual_sec, elapsed_milli, actual_milli, date} timestamp = none;
+int units = 0;
+
+_Bool show_units = TRUE;
+
+int low_battery = FALSE;
+
+unsigned long start_time = 0;
+
+// Watchdog flag
+_Bool active = FALSE;
+
+// Outputs the measurement timestamp
+void print_timestamp() {
+
+    struct timeval now;
+    char date_now[30];
+
+    if (timestamp == none) return;
+
+    if (offline_time) {
+        now.tv_sec = offline_time;
+        now.tv_usec = 0;
+    } else {
+        gettimeofday(&now,NULL);
+    }
+
+    switch (timestamp) {
+        case none:
+            break;
+
+        case elapsed_sec:
+            if (start_time == 0) {
+                printf("0.0");
+                start_time = now.tv_sec*1000 + now.tv_usec/1000;
+            } else {
+                printf("%.1f", (float)((now.tv_sec*1000 + now.tv_usec/1000) - start_time)/1000);
+            }
+            break;
+
+        case actual_sec:
+            printf("%ld.%ld", now.tv_sec, now.tv_usec/100000);
+            break;
+
+        case elapsed_milli:
+            if (start_time == 0) {
+                printf("0");
+                start_time = now.tv_sec*1000 + now.tv_usec/1000;
+            } else {
+                printf("%ld", ((now.tv_sec*1000 + now.tv_usec/1000) - start_time));
+            }
+            break;
+
+        case actual_milli:
+            printf("%ld", now.tv_sec*1000 + now.tv_usec/1000);
+            break;
+
+        case date:
+            strftime(date_now,30, "%F %H:%M:%S", localtime(&now.tv_sec));
+            printf("%s.%ld", date_now, now.tv_usec/100000);
+            break;
+
+    }
+
+}
+
+
+// Outputs the measurement value
+void print_measurement(float measurement, int decimal, int scale) {
+
+    if (decimal > 3) {
+        printf("Overload");
+    } else {
+
+        if (units && (units != scale)) {
+
+            measurement = measurement * pow(10.0, (scale-units)*3);
+
+            decimal = decimal - (scale-units)*3;
+
+        }
+
+        printf("% .*f", decimal, measurement);
+
+    }
+
+}
+
+// Outputs the measurement units
+void print_units(int scale, int function) {
+
+    if (units) scale = units;
+
+    switch (scale) {
+        case 1:
+            printf("n");
+            break;
+
+        case 2:
+            printf("u");
+            break;
+
+        case 3:
+            printf("m");
+            break;
+
+        case 5:
+            printf("k");
+            break;
+
+        case 6:
+            printf("M");
+            break;
+    }
+
+    switch (function) {
+
+        case 0:
+            printf("Vdc");
+            break;
+
+        case 1:
+            printf("Vac");
+            break;
+
+        case 2:
+            printf("Adc");
+            break;
+
+        case 3:
+            printf("Aac");
+            break;
+
+        case 4:
+            printf("Ohms");
+            break;
+
+        case 5:
+            printf("F");
+            break;
+
+        case 6:
+            printf("Hz");
+            break;
+
+        case 7:
+            printf("%%");
+            break;
+
+        case 8:
+            printf("°C");
+            break;
+
+        case 9:
+            printf("°F");
+            break;
+
+        case 10:
+            printf("V");
+            break;
+
+        case 11:
+            printf("Ohms");
+            break;
+
+        case 12:
+            printf("hFE");
+            break;
+
+    }
+
+}
+
+// Outputs the measurement type
+void print_type(uint16_t type) {
+
+    if (type & 0x02) printf("Δ ");
+    if (type & 0x10) printf("min");
+    if (type & 0x20) printf("max");
+    if (type & 0x01) printf("hold");
+
+}
+
 // Outputs the measurement
 void display_reading(uint16_t* reading) {
 
@@ -380,3 +630,266 @@ int main(int argc, char *argv[]) {
             scan = FALSE;
         }
     } else {
+
+        for (int argi = 1; argi < argc; argi++) {
+            if (argv[argi][0] == '-') {
+                switch (argv[argi][1]) {
+                    case 's':
+                        timestamp = elapsed_sec;
+                        break;
+
+                    case 'S':
+                        timestamp = actual_sec;
+                        break;
+
+                    case 't':
+                        timestamp = elapsed_milli;
+                        break;
+
+                    case 'T':
+                        timestamp = actual_milli;
+                        break;
+
+                    case 'd':
+                        timestamp = date;
+                        break;
+
+                    case 'c':
+                        format = csv;
+                        break;
+
+                    case 'j':
+                        format = json;
+                        break;
+
+                    case 'n':
+                        units = 1;
+                        break;
+
+                    case 'u':
+                        units = 2;
+                        break;
+
+                    case 'm':
+                        units = 3;
+                        break;
+
+                    case 'b':
+                        units = 4;
+                        break;
+
+                    case 'k':
+                        units = 5;
+                        break;
+
+                    case 'M':
+                        units = 6;
+                        break;
+
+                    case 'x':
+                        show_units = FALSE;
+                        break;
+
+                    case 'r':
+                        offline = TRUE;
+                        break;
+
+                    case 'h':
+                        usage(argv);
+                        return 0;
+
+                    case 'q':
+                        quiet = TRUE;
+                        break;
+
+                    case 'i':
+                        interactive = TRUE;
+                        break;
+
+                    case 'V':
+                        printf("%s version ", argv[0]);
+                        printf(VERSION);
+                        printf("\n");
+                        return 0;
+
+                    default:
+                        fprintf(stderr, "Unknown option %s\n\n", argv[argi]);
+                        usage(argv);
+                        return 1;
+
+                }
+            } else {
+                address = argv[argi];
+                scan = FALSE;
+            }
+        }
+    }
+
+    if (scan) {
+
+        do {
+            if (!quiet) fprintf(stderr, "Scanning...\n");
+
+            ret = gattlib_adapter_open(adapter_name, &adapter);
+            if (ret) {
+                fprintf(stderr, "ERROR: Failed to open adapter.\n");
+                return 1;
+            }
+
+            ret = gattlib_adapter_scan_enable(adapter, ble_discovered_device, BLE_SCAN_TIMEOUT);
+            if (ret) {
+                fprintf(stderr, "ERROR: Failed to scan.\n");
+                return 1;
+            }
+            gattlib_adapter_scan_disable(adapter);
+
+            gattlib_adapter_close(adapter);
+
+            if (address == NULL) {
+                if (!quiet) fprintf(stderr, "Multimeter device not found.\n");
+                sleep(2);
+            }
+
+        } while (address == NULL);
+
+    }
+
+    if (address == NULL) {
+        usage(argv);
+        return 1;
+    }
+
+    connect_device();
+
+    if (interval) {
+
+        // Start offline recording
+
+        char *index;
+
+        uint8_t buffer[16];
+
+        struct tm *date;
+        time_t now;
+
+        memset(buffer, 0, sizeof(buffer));
+
+        // Send current date/time
+        index = stpcpy((char *)buffer, DATE_CMD);
+
+        now = time(NULL);
+        date = localtime(&now);
+
+        index[0] = (uint8_t)(date->tm_year/100);
+        index[1] = (uint8_t)(date->tm_year - date->tm_year/100);
+        index[2] = (uint8_t)(date->tm_mon + 1);
+        index[3] = (uint8_t)(date->tm_mday);
+        index[4] = (uint8_t)(date->tm_hour);
+        index[5] = (uint8_t)(date->tm_min);
+        index[6] = (uint8_t)(date->tm_sec);
+
+		ret = gattlib_write_char_by_uuid(connection, &g_command_uuid, buffer, sizeof(buffer));
+        if (ret) {
+            fprintf(stderr, "Fail to write date.\n");
+            return 1;
+        }
+
+        //  Send recording parameters
+        memset(buffer, 0, sizeof(buffer));
+
+        index = stpcpy((char *)buffer, RECORD_CMD);
+
+        ((uint32_t *)index)[0] = interval;
+        ((uint32_t *)index)[1] = num_measurements;
+		ret = gattlib_write_char_by_uuid(connection, &g_command_uuid, buffer, sizeof(buffer));
+        if (ret) {
+            fprintf(stderr, "Failed to write record command.\n");
+            return 1;
+        }
+
+        if (!quiet) fprintf(stderr, "Recording started\n");
+
+    } else {
+
+        start_listener();
+
+        if (offline) {
+            // Request offline recording download
+            uint8_t buffer[16];
+            size_t len;
+
+            // Check number of measurements available
+            memset(buffer, 0, sizeof(buffer));
+
+            stpcpy((char *)buffer, READLEN_CMD);
+
+            ret = gattlib_write_char_by_uuid(connection, &g_command_uuid, buffer, sizeof(buffer));
+            if (ret) {
+                fprintf(stderr, "Fail to request length of offline recorded measurements.\n");
+                return 1;
+            }
+
+
+            len = sizeof(buffer);
+            ret = gattlib_read_char_by_uuid(connection, &g_command_uuid, buffer, &len);
+            if (ret) {
+                fprintf(stderr, "Failed to read length of offline recorded measurements.\n");
+                return 1;
+            }
+
+            if (*((uint32_t *)buffer) == 0) {
+                fprintf(stderr, "No offline recorded measurements available.\n");
+            } else {
+                if (!quiet) fprintf(stderr, "Downloading %u offline recorded measurements.\n",
+                    (*((uint32_t *)buffer)-2)/2);
+            }
+
+            // Request measurement data
+            memset(buffer, 0, sizeof(buffer));
+
+            stpcpy((char *)buffer, READ_CMD);
+
+            ret = gattlib_write_char_by_uuid(connection, &g_command_uuid, buffer, sizeof(buffer));
+            if (ret) {
+                fprintf(stderr, "Failed to request offline recorded measurements.\n");
+                return 1;
+            }
+        }
+
+        g_timeout_add_seconds(timeout_sec, watchdog_check, NULL);
+
+        loop = g_main_loop_new(NULL, 0);
+
+        signal(SIGINT, signal_handler);
+
+        if (interactive) {
+
+            // Disable terminal buffering
+            struct termios new_termios;
+
+            tcgetattr(0, &orig_termios);
+            memcpy(&new_termios, &orig_termios, sizeof(new_termios));
+            new_termios.c_lflag &= ~(ECHO | ECHONL | ICANON);
+
+            tcsetattr(0, TCSANOW, &new_termios);
+
+            // Set up input event handler
+            pchan = g_io_channel_unix_new(fileno(stdin));
+            g_io_channel_set_close_on_unref(pchan, TRUE);
+            gint events = G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL;
+            g_io_add_watch(pchan, events, interactive_read, NULL);
+        }
+
+        g_main_loop_run(loop);
+
+        g_main_loop_unref(loop);
+    }
+
+    gattlib_disconnect(connection);
+    if (!quiet) fprintf(stderr,"Disconnected\n");
+
+    if (interactive)
+        tcsetattr(0, TCSANOW, &orig_termios);
+
+    return 0;
+}
