@@ -23,10 +23,9 @@
   </div>
   <button onClick='connect()'>connect</button>
   <button onClick='disconnect()'>disconnect</button>
-  </div>
-  <button aria-label="open" onclick="function()">Reading: <output id='value'></label></output></button> 
-<div attr.aria-label="attr.aria-label">attr.aria-label</div>
-<br>
-<div [attr.aria-label]="'[attr.aria-label]'">[attr.aria-label]</div>
-</body>
-</html>
+  <div role="menubar"> 
+    <div role="menuitem" aria-haspopup="true" id="fileMenu">Reading</div> 
+    <div role="menu" aria-labelledby="fileMenu"><output id='value'></label></output>
+       
+    </div> 
+</div> 
