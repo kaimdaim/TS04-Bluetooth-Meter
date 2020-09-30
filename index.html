@@ -23,9 +23,10 @@
   </div>
   <button onClick='connect()'>connect</button>
   <button onClick='disconnect()'>disconnect</button>
-  <div role="menubar"> 
-    <div role="menuitem" aria-haspopup="true" id="fileMenu">Reading</div> 
-    <div role="menu" aria-labelledby="fileMenu"><output id='value'></label></output>
-       
+  new ClipboardJS('.btn', {
+    text: function(trigger) {
+        return trigger.getAttribute('aria-label');
+    }
+});
     </div> 
 </div> 
