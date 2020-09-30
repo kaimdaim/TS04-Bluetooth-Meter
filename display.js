@@ -45,6 +45,13 @@ function fillDisplay(thisMeter) {
   // what setting are you on?
   document.getElementById('setting').value = thisMeter.setting;
 }
+<button onclick="store()" type="button">StoreReading</button>
+<script  type="text/javascript">
+  function store(){
+     var inputReading= document.getElementById("reading");
+     localStorage.setItem("reading", inputReading.value);
+    }
+</script>
 
 // clear all the display elements except the connection status:
 function clearDisplay(meter) {
