@@ -45,6 +45,7 @@ function fillDisplay(thisMeter) {
   // what setting are you on?
   document.getElementById('setting').value = thisMeter.setting;
 }
+ // do you want to store the reading?
 <button onclick="store()" type="button">StoreReading</button>
 <script  type="text/javascript">
   function store(){
